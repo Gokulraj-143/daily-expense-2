@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Expense Dashboard</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+        }
+
+        .card {
+            width: 720px;
+            background: rgba(255, 255, 255, 0.226);
+            backdrop-filter: blur(12px);
+            padding: 20px;
+            border-radius: 14px;
+            text-align: center;
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+        }
+
+        input,
+        select {
+            background: #222;
+            color: white
+        }
+
+        button {
+            background: #00c6ff;
+            font-weight: bold;
+            cursor: pointer
+        }
+
+        .row {
+            display: flex;
+            gap: 5px
+        }
+
+        .mic {
+            width: 45px;
+            background: rgb(0, 255, 187)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px
+        }
+
+        td,
+        th {
+            border: 1px solid #555;
+            padding: 6px;
+            font-size: 14px
+        }
+
+        #date::-webkit-calendar-picker-indicator {
+            filter: invert(1) sepia(1) saturate(5) hue-rotate(160deg);
+        }
+
+
+        img {
+            width: 45px;
+            cursor: pointer;
+            border-radius: 5px
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <h2>Daily Expense Tracker</h2>
+
+        <div class="row">
+            <input id="title" placeholder="Expense Title">
+            <button class="mic" onclick="voice()">🎤</button>
+        </div>
+
+        <input id="amount" type="number" placeholder="Amount">
+        <input id="date" type="date">
+
+        <select id="cat">
+            <option value="">Category</option>
+            <option>Food</option>
+            <option>Travel</option>
+            <option>Shopping</option>
+            <option>Rent</option>
+        </select>
+
+        <input id="bill" type="file" accept="image/*">
+
+        <button onclick="add()">Add / Update Expense</button>
+
+        <h3 id="total">Total : ₹0</h3>
+
+        <button onclick="pdf()">Download PDF Report</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Bill</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="list"></tbody>
+        </table>
+
+        <button onclick="logout()">Logout</button>
+
+    </div>
+
+    <script>
+        if (sessionStorage.getItem("loggedIn") !== "true") location.href = "login.html";
+
+        let arr = JSON.parse(localStorage.getItem("exp")) || [];
+        let editId = -1;
+
+        function add() {
+            if (!title.value || !amount.value || !date.value || !cat.value) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            if (bill.files[0]) {
+                let r = new FileReader();
+                r.onload = () => save(r.result);
+                r.readAsDataURL(bill.files[0]);
+            } else {
+                save("");
+            }
+
+            function save(pic) {
+                let obj = {
+                    t: title.value,
+                    a: +amount.value,
+                    c: cat.value,
+                    d: date.value,
+                    b: pic
+                };
+
+                if (editId === -1) arr.push(obj);
+                else { arr[editId] = obj; editId = -1; }
+
+                localStorage.setItem("exp", JSON.stringify(arr));
+                clear(); render();
+            }
+        }
+
+        function render() {
+            list.innerHTML = "";
+            let tot = 0;
+
+            arr.forEach((e, i) => {
+                tot += e.a;
+
+                list.innerHTML += `
+            <tr>
+                <td>${e.t}</td>
+                <td>₹${e.a}</td>
+                <td>${e.c}</td>
+                <td>${e.d}</td>
+                <td>${e.b ? `<img src="${e.b}" onclick="view('${e.b}')">` : "-"}</td>
+                <td>
+                    <button onclick="edit(${i})">✏️</button>
+                    <button onclick="del(${i})">🗑️</button>
+                </td>
+            </tr>`;
+            });
+
+            total.innerText = "Total : ₹" + tot;
+        }
+
+        function del(i) {
+            if (confirm("Delete this expense?")) {
+                arr.splice(i, 1);
+                localStorage.setItem("exp", JSON.stringify(arr));
+                render();
+            }
+        }
+
+        function edit(i) {
+            let e = arr[i];
+            title.value = e.t;
+            amount.value = e.a;
+            cat.value = e.c;
+            date.value = e.d;
+            editId = i;
+        }
+
+        function view(src) {
+            let w = window.open();
+            w.document.write(`<img src="${src}" style="width:100%">`);
+        }
+
+        function clear() {
+            title.value = "";
+            amount.value = "";
+            date.value = "";
+            cat.value = "";
+            bill.value = "";
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            location.href = "index.html";
+        }
+
+        /* 🎤 Voice Input */
+        function voice() {
+            let r = new webkitSpeechRecognition();
+            r.lang = "en-IN";
+            r.onresult = e => title.value = e.results[0][0].transcript;
+            r.start();
+        }
+
+        /* 📄 PDF */
+        function pdf() {
+            const { jsPDF } = window.jspdf;
+            let doc = new jsPDF();
+
+            doc.setFontSize(16);
+            doc.text("Daily Expense Report", 70, 15);
+
+            let y = 30;
+            let total = 0;
+
+            arr.forEach(e => {
+                total += e.a;
+
+                doc.rect(10, y - 10, 190, 35);
+                doc.setFontSize(11);
+                doc.text(`Title : ${e.t}`, 15, y);
+                doc.text(`Category : ${e.c}`, 15, y + 6);
+                doc.text(`Date : ${e.d}`, 15, y + 12);
+                doc.text(`Amount : ${e.a}`, 15, y + 18);
+
+                if (e.b) doc.addImage(e.b, "JPEG", 150, y - 5, 25, 25);
+
+                y += 45;
+                if (y > 250) { doc.addPage(); y = 30; }
+            });
+
+            doc.setFontSize(13);
+            doc.text(`Total Expense : ${total}`, 75, y + 10);
+            doc.save("Daily_Expense_Report.pdf");
+        }
+
+        render();
+    </script>
+
+</body>
+
+</html>

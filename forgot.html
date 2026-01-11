@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Email OTP Verification</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #000);
+            background-size: 400% 400%;
+            animation: bg 10s infinite;
+            color: white
+        }
+
+        @keyframes bg {
+            0% {
+                background-position: 0%
+            }
+
+            50% {
+                background-position: 100%
+            }
+
+            100% {
+                background-position: 0%
+            }
+        }
+
+        .card {
+            width: 360px;
+            background: rgba(255, 255, 255, .12);
+            backdrop-filter: blur(12px);
+            padding: 25px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 0 40px cyan;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 6px
+        }
+
+        input {
+            background: #222;
+            color: white
+        }
+
+        button {
+            background: #00c6ff;
+            font-weight: bold;
+            cursor: pointer
+        }
+
+        .otp-box {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .otp-box input {
+            width: 50px;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        .hide {
+            display: none
+        }
+
+        a {
+            color: #00eaff;
+            text-decoration: none
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <h2>Forgot Password</h2>
+
+        <!-- STEP 1 -->
+        <div id="step1">
+            <input id="email" placeholder="Registered Email">
+            <button onclick="sendOTP()">Send OTP</button>
+        </div>
+
+        <!-- STEP 2 -->
+        <div id="step2" class="hide">
+            <p>Enter OTP</p>
+
+            <div class="otp-box">
+                <input maxlength="1" id="o1" oninput="move(1)">
+                <input maxlength="1" id="o2" oninput="move(2)">
+                <input maxlength="1" id="o3" oninput="move(3)">
+                <input maxlength="1" id="o4" oninput="move(4)">
+            </div>
+
+            <button onclick="verifyOTP()">Verify OTP</button>
+        </div>
+
+        <!-- STEP 3 -->
+        <div id="step3" class="hide">
+            <input id="newpass" type="password" placeholder="New Password">
+            <input id="confpass" type="password" placeholder="Confirm Password">
+            <button onclick="resetPass()">Reset Password</button>
+        </div>
+
+        <br>
+        <a href="login.html">Back to Login</a>
+
+    </div>
+
+    <script>
+
+        let realOTP = "";
+        let user = JSON.parse(localStorage.getItem("user"));
+
+        function sendOTP() {
+
+            let em = email.value.trim();
+
+            if (!em) {
+                alert("Enter email");
+                return;
+            }
+
+            if (!user || em !== user.email) {
+                alert("Email not registered ❌");
+                return;
+            }
+
+            realOTP = Math.floor(1000 + Math.random() * 9000);
+            alert("Demo OTP : " + realOTP); // 👉 demo only
+
+            step1.classList.add("hide");
+            step2.classList.remove("hide");
+        }
+
+        function move(n) {
+            if (document.getElementById("o" + n).value && n < 4)
+                document.getElementById("o" + (n + 1)).focus();
+        }
+
+        function verifyOTP() {
+
+            let otp = o1.value + o2.value + o3.value + o4.value;
+
+            if (otp.length < 4) {
+                alert("Enter full OTP");
+                return;
+            }
+
+            if (otp == realOTP) {
+                step2.classList.add("hide");
+                step3.classList.remove("hide");
+            } else {
+                alert("Wrong OTP ❌");
+            }
+        }
+
+        function resetPass() {
+
+            if (!newpass.value || !confpass.value) {
+                alert("Fill all fields");
+                return;
+            }
+
+            if (newpass.value !== confpass.value) {
+                alert("Password not match");
+                return;
+            }
+
+            user.password = newpass.value;
+            localStorage.setItem("user", JSON.stringify(user));
+
+            alert("Password Reset Successful ✅");
+            location.href = "login.html";
+        }
+
+    </script>
+
+</body>
+
+</html>
